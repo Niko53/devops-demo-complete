@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="it" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Piccola applicazione demo per lezioni DevOps con health check, readiness, release info, metriche e simulazione errori." />
+  <meta property="og:title" content="DevOps Demo App" />
+  <meta property="og:description" content="Applicazione web di esempio per pipeline, container, monitoring e deployment DevOps." />
+  <meta property="og:type" content="website" />
+  <title>devops-demo-app</title>
+  <link rel="preconnect" href="https://api.fontshare.com" />
+  <link href="https://api.fontshare.com/v2/css?f[]=satoshi@400,500,700,900&f[]=boska@400,700&display=swap" rel="stylesheet">
+  <style>
+    :root, [data-theme="light"] {
+      --font-display: 'Boska', Georgia, serif;
+      --font-body: 'Satoshi', Inter, sans-serif;
+      --text-xs: clamp(0.75rem, 0.7rem + 0.25vw, 0.875rem);
+      --text-sm: clamp(0.875rem, 0.8rem + 0.35vw, 1rem);
+      --text-base: clamp(1rem, 0.95rem + 0.25vw, 1.125rem);
+      --text-lg: clamp(1.125rem, 1rem + 0.75vw, 1.5rem);
+      --text-xl: clamp(1.5rem, 1.2rem + 1.25vw, 2.25rem);
+      --text-2xl: clamp(2rem, 1.2rem + 2.5vw, 3.5rem);
+      --space-1: 0.25rem; --space-2: 0.5rem; --space-3: 0.75rem; --space-4: 1rem;
+      --space-5: 1.25rem; --space-6: 1.5rem; --space-8: 2rem; --space-10: 2.5rem;
+      --space-12: 3rem; --space-16: 4rem; --space-20: 5rem;
+      --color-bg: #f6f5f1; --color-surface: #ffffff; --color-surface-2: #f0eee9; --color-border: #d7d2c7;
+      --color-text: #1f2937; --color-text-muted: #5f6b7a; --color-text-faint: #8d98a5; --color-text-inverse: #f8fafc;
+      --color-primary: #0f4a87; --color-primary-hover: #0c3d6f; --color-accent: #f28c28;
+      --color-success: #2e7d32; --color-warning: #a86413; --color-error: #b42318; --color-info: #0b7285;
+      --radius-sm: 0.375rem; --radius-md: 0.65rem; --radius-lg: 0.95rem; --radius-xl: 1.25rem;
+      --shadow-sm: 0 1px 2px rgba(16,24,40,0.06); --shadow-md: 0 8px 24px rgba(16,24,40,0.08); --shadow-lg: 0 18px 50px rgba(16,24,40,0.12);
+      --transition: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+      --content: 1180px;
+    }
+    [data-theme="dark"] {
+      --color-bg: #171614; --color-surface: #1e1d1a; --color-surface-2: #262420; --color-border: #3c3933;
+      --color-text: #ede9df; --color-text-muted: #c6c0b3; --color-text-faint: #91897b; --color-text-inverse: #f8fafc;
+      --color-primary: #6ea8e3; --color-primary-hover: #8dbcf0; --color-accent: #ffb457;
+      --color-success: #67c26f; --color-warning: #e8a042; --color-error: #f97066; --color-info: #7bd3e0;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.22); --shadow-md: 0 8px 24px rgba(0,0,0,0.28); --shadow-lg: 0 18px 50px rgba(0,0,0,0.42);
+    }
+    *, *::before, *::after { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; min-height: 100dvh; font-family: var(--font-body); font-size: var(--text-base); line-height: 1.6; color: var(--color-text); background: linear-gradient(180deg, var(--color-bg), color-mix(in oklab, var(--color-bg) 70%, var(--color-surface-2))); }
+    img, svg { display:block; max-width:100%; }
+    a { color: inherit; text-decoration: none; }
+    button { font: inherit; cursor: pointer; }
+    .container { width:min(calc(100% - 2rem), var(--content)); margin-inline:auto; }
+    .header { position: sticky; top:0; z-index:10; backdrop-filter: blur(14px); background: color-mix(in oklab, var(--color-bg) 82%, transparent); border-bottom:1px solid color-mix(in oklab, var(--color-border) 80%, transparent); }
+    .header-inner { display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); padding:var(--space-4) 0; }
+    .brand { display:flex; align-items:center; gap:0.9rem; font-size:var(--text-sm); font-weight:700; }
+    .brand-mark { width:42px; height:42px; border-radius:14px; display:grid; place-items:center; color:white; background: linear-gradient(135deg, var(--color-primary), color-mix(in oklab, var(--color-primary) 65%, var(--color-accent))); box-shadow: var(--shadow-sm); }
+    .brand-stack strong { display:block; font-size:var(--text-sm); }
+    .brand-stack span { display:block; color:var(--color-text-muted); font-size:var(--text-xs); }
+    .nav { display:flex; gap:var(--space-4); align-items:center; }
+    .nav a { font-size:var(--text-sm); color:var(--color-text-muted); }
+    .nav a:hover { color:var(--color-primary); }
+    .theme-toggle, .ghost-btn, .primary-btn, .danger-btn { border-radius:999px; border:1px solid transparent; transition: all var(--transition); }
+    .theme-toggle, .ghost-btn { background: var(--color-surface); color: var(--color-text); border-color: color-mix(in oklab, var(--color-border) 80%, transparent); padding:0.7rem 1rem; }
+    .primary-btn { background: var(--color-primary); color: var(--color-text-inverse); padding:0.85rem 1.15rem; box-shadow: var(--shadow-sm); }
+    .primary-btn:hover { background: var(--color-primary-hover); transform: translateY(-1px); }
+    .ghost-btn:hover, .theme-toggle:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .danger-btn { background: var(--color-error); color: white; padding:0.85rem 1.15rem; }
+    .hero { padding: clamp(var(--space-10), 8vw, var(--space-20)) 0 var(--space-12); }
+    .hero-grid { display:grid; grid-template-columns: 1.15fr 0.85fr; gap:var(--space-8); align-items:stretch; }
+    .hero-copy, .hero-panel, .card { background: color-mix(in oklab, var(--color-surface) 90%, white); border:1px solid color-mix(in oklab, var(--color-border) 80%, transparent); border-radius:var(--radius-xl); box-shadow:var(--shadow-md); }
+    .hero-copy { padding: clamp(var(--space-8), 4vw, var(--space-12)); position:relative; overflow:hidden; }
+    .eyebrow { display:inline-flex; align-items:center; gap:0.5rem; padding:0.45rem 0.8rem; border-radius:999px; background: color-mix(in oklab, var(--color-primary) 10%, var(--color-surface)); color:var(--color-primary); font-size:var(--text-xs); font-weight:700; text-transform:uppercase; letter-spacing:0.08em; }
+    h1 { margin:var(--space-5) 0 var(--space-4); font-family:var(--font-display); font-size:var(--text-2xl); line-height:1.02; max-width:12ch; }
+    .lead { color:var(--color-text-muted); max-width:62ch; }
+    .hero-actions, .inline-actions { display:flex; flex-wrap:wrap; gap:var(--space-3); margin-top:var(--space-6); }
+    .mini-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:var(--space-4); margin-top:var(--space-8); }
+    .mini-stat { padding:var(--space-4); border-radius:var(--radius-lg); background: color-mix(in oklab, var(--color-surface-2) 70%, white); }
+    .mini-stat strong { display:block; font-size:var(--text-lg); }
+    .hero-panel { padding:var(--space-6); display:grid; gap:var(--space-4); }
+    .status-row { display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); padding:var(--space-4); border-radius:var(--radius-lg); background: color-mix(in oklab, var(--color-surface-2) 85%, white); }
+    .status-meta small { display:block; color:var(--color-text-faint); font-size:var(--text-xs); }
+    .pill { display:inline-flex; align-items:center; gap:0.45rem; padding:0.45rem 0.8rem; border-radius:999px; font-size:var(--text-xs); font-weight:700; }
+    .ok { background: color-mix(in oklab, var(--color-success) 16%, transparent); color: var(--color-success); }
+    .warn { background: color-mix(in oklab, var(--color-warning) 16%, transparent); color: var(--color-warning); }
+    .err { background: color-mix(in oklab, var(--color-error) 14%, transparent); color: var(--color-error); }
+    .info { background: color-mix(in oklab, var(--color-info) 16%, transparent); color: var(--color-info); }
+    main section { padding: var(--space-10) 0; }
+    .section-head { display:flex; align-items:end; justify-content:space-between; gap:var(--space-4); margin-bottom:var(--space-6); }
+    h2 { margin:0; font-size:var(--text-xl); line-height:1.12; max-width:16ch; }
+    .section-head p { margin:0; max-width:58ch; color:var(--color-text-muted); }
+    .grid-3 { display:grid; grid-template-columns:repeat(3, 1fr); gap:var(--space-5); }
+    .grid-2 { display:grid; grid-template-columns:repeat(2, 1fr); gap:var(--space-5); }
+    .card { padding:var(--space-6); }
+    .card:hover { transform: translateY(-2px); box-shadow: var(--shadow-lg); }
+    .card h3 { margin:0 0 var(--space-3); font-size:var(--text-lg); }
+    .card p, .card li, .muted { color:var(--color-text-muted); }
+    .stack { display:grid; gap:var(--space-4); }
+    .code-block { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size:0.9rem; background:#101828; color:#f8fafc; border-radius:var(--radius-lg); padding:var(--space-5); overflow:auto; }
+    .endpoint { display:flex; align-items:center; justify-content:space-between; gap:var(--space-4); padding:var(--space-4); border:1px solid color-mix(in oklab, var(--color-border) 75%, transparent); border-radius:var(--radius-lg); background: color-mix(in oklab, var(--color-surface) 84%, white); }
+    .kpis { display:grid; grid-template-columns:repeat(4,1fr); gap:var(--space-4); }
+    .kpi { padding:var(--space-5); border-radius:var(--radius-lg); background: color-mix(in oklab, var(--color-surface-2) 85%, white); border:1px solid color-mix(in oklab, var(--color-border) 72%, transparent); }
+    .kpi strong { display:block; font-size:var(--text-lg); margin-bottom:0.2rem; }
+    .bar-wrap { display:grid; gap:var(--space-3); }
+    .bar-row { display:grid; grid-template-columns: 132px 1fr 52px; gap:var(--space-3); align-items:center; }
+    .bar-track { height:12px; border-radius:999px; background: color-mix(in oklab, var(--color-border) 55%, transparent); overflow:hidden; }
+    .bar-fill { height:100%; border-radius:999px; background: linear-gradient(90deg, var(--color-primary), var(--color-accent)); }
+    .terminal { background:#08111f; color:#ddf4ff; border-radius:var(--radius-xl); padding:var(--space-6); box-shadow:var(--shadow-lg); }
+    .terminal-header { display:flex; gap:0.45rem; margin-bottom:var(--space-4); }
+    .terminal-dot { width:10px; height:10px; border-radius:999px; }
+    .faq details { border-top:1px solid color-mix(in oklab, var(--color-border) 75%, transparent); padding:var(--space-4) 0; }
+    .faq summary { cursor:pointer; list-style:none; font-weight:700; }
+    .faq summary::-webkit-details-marker { display:none; }
+    .footer { padding: var(--space-10) 0 var(--space-12); color:var(--color-text-muted); }
+    .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+    .skip-link { position:absolute; left:-999px; top:0; background:var(--color-primary); color:white; padding:0.75rem 1rem; z-index:100; }
+    .skip-link:focus { left:1rem; top:1rem; }
+    @media (max-width: 980px) {
+      .hero-grid, .grid-3, .grid-2, .kpis, .mini-grid { grid-template-columns:1fr; }
+      .section-head { align-items:start; flex-direction:column; }
+      .nav { display:none; }
+      .bar-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#contenuto">Vai al contenuto</a>
+  <header class="header">
+    <div class="container header-inner">
+      <div class="brand" aria-label="DevOps Demo App">
+        <div class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M4 12h16"></path><path d="M8 8l-4 4 4 4"></path><path d="M16 8l4 4-4 4"></path>
+          </svg>
+        </div>
+        <div class="brand-stack">
+          <strong>DevOps Demo App</strong>
+          <span>Esempio didattico per pipeline, deploy e monitoring</span>
+        </div>
+      </div>
+      <nav class="nav" aria-label="Navigazione principale">
+        <a href="#overview">Overview</a>
+        <a href="#endpoints">Endpoint</a>
+        <a href="#deploy">Deploy</a>
+        <a href="#metrics">Metriche</a>
+        <a href="#faq">FAQ</a>
+      </nav>
+      <button class="theme-toggle" data-theme-toggle aria-label="Passa al tema scuro">Tema</button>
+    </div>
+  </header>
+
+  <main id="contenuto">
+    <section class="hero">
+      <div class="container hero-grid">
+        <div class="hero-copy">
+          <span class="eyebrow">Demo pronta per le lezioni</span>
+          <h1>Una piccola web app ideale per spiegare DevOps in modo concreto.</h1>
+          <p class="lead">Questa applicazione è pensata come esempio semplice ma realistico: ha una UI leggibile, finti endpoint tipici da mostrare a lezione, variabili di configurazione, health check, metriche e informazioni di release.</p>
+          <div class="hero-actions">
+            <a class="primary-btn" href="#endpoints">Vedi gli endpoint</a>
+            <a class="ghost-btn" href="#deploy">Scenario di deploy</a>
+          </div>
+          <div class="mini-grid" aria-label="Punti chiave della demo">
+            <div class="mini-stat"><strong>Statica</strong><span class="muted">Facile da eseguire in locale o in container</span></div>
+            <div class="mini-stat"><strong>Osservabile</strong><span class="muted">Include health, readiness e metriche</span></div>
+            <div class="mini-stat"><strong>Didattica</strong><span class="muted">Perfetta per CI/CD, Docker e Kubernetes</span></div>
+          </div>
+        </div>
+        <aside class="hero-panel" aria-label="Stato applicazione demo">
+          <div class="status-row">
+            <div class="status-meta"><strong>Application status</strong><small>Simulazione runtime</small></div>
+            <span class="pill ok">Healthy</span>
+          </div>
+          <div class="status-row">
+            <div class="status-meta"><strong>Current release</strong><small id="releaseVersion">v1.4.2</small></div>
+            <span class="pill info" id="releaseChannel">stable</span>
+          </div>
+          <div class="status-row">
+            <div class="status-meta"><strong>Pod readiness</strong><small id="podCount">3/3 ready</small></div>
+            <span class="pill ok" id="podStatus">ok</span>
+          </div>
+          <div class="status-row">
+            <div class="status-meta"><strong>Feature flag</strong><small>checkout_v2</small></div>
+            <span class="pill warn" id="featureFlag">disabled</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <section id="overview">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Overview</span>
+            <h2>Che cosa puoi mostrare durante una lezione DevOps.</h2>
+          </div>
+          <p>La demo è costruita per essere spiegata a livelli: prima il frontend statico, poi il container, quindi la pipeline, il deploy e infine l’osservabilità. In questo modo gli studenti vedono subito un caso d’uso coerente e riutilizzabile.</p>
+        </div>
+        <div class="grid-3">
+          <article class="card">
+            <h3>Frontend semplice</h3>
+            <p>Una singola pagina HTML, CSS e JavaScript: perfetta per introdurre Dockerfile, image build, versioning e deploy senza aggiungere complessità inutile.</p>
+          </article>
+          <article class="card">
+            <h3>Endpoint tipici</h3>
+            <p>Health, readiness, metrics, version e config sono i classici endpoint o artefatti che si usano come esempio per reverse proxy, probe Kubernetes e monitoring.</p>
+          </article>
+          <article class="card">
+            <h3>Scenario reale</h3>
+            <p>Puoi usarla per simulare rollout, variabili d’ambiente, incidenti controllati, feature flag e differenze tra ambienti dev, staging e production.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="endpoints">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Endpoint didattici</span>
+            <h2>Endpoint e risorse utili da spiegare in aula.</h2>
+          </div>
+          <p>Gli endpoint qui sotto sono esempi che puoi mostrare nelle slide, nella pipeline o in un cluster Kubernetes. La UI li presenta come riferimento immediato, ma puoi anche esporli davvero con un piccolo backend o con file statici.</p>
+        </div>
+        <div class="stack">
+          <div class="endpoint"><div><strong>GET /health</strong><div class="muted">Verifica rapida che il servizio risponda.</div></div><span class="pill ok">200 OK</span></div>
+          <div class="endpoint"><div><strong>GET /ready</strong><div class="muted">Controllo di readiness per ingress, service mesh o probe Kubernetes.</div></div><span class="pill ok">ready</span></div>
+          <div class="endpoint"><div><strong>GET /version</strong><div class="muted">Mostra versione, commit SHA, ambiente e data build.</div></div><span class="pill info">release</span></div>
+          <div class="endpoint"><div><strong>GET /metrics</strong><div class="muted">Espone metriche esempio come richieste, error rate e latency.</div></div><span class="pill info">prometheus</span></div>
+          <div class="endpoint"><div><strong>GET /config</strong><div class="muted">Visualizza configurazione non sensibile caricata da environment variables.</div></div><span class="pill warn">demo</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="deploy">
+      <div class="container grid-2">
+        <article class="card">
+          <span class="eyebrow">Esempio pipeline</span>
+          <h2 style="margin-top:1rem; max-width:14ch;">Una sequenza molto chiara da usare per spiegare la CI/CD.</h2>
+          <div class="stack" style="margin-top:1.2rem;">
+            <div><strong>1. Build</strong><div class="muted">Checkout del repository, validazione del contenuto e creazione dell’immagine container.</div></div>
+            <div><strong>2. Test</strong><div class="muted">Linting, smoke test e verifica dei file pubblicati.</div></div>
+            <div><strong>3. Publish</strong><div class="muted">Push dell’immagine su un registry come GHCR o Docker Hub.</div></div>
+            <div><strong>4. Deploy</strong><div class="muted">Aggiornamento di un Deployment Kubernetes con nuova immagine e rollout controllato.</div></div>
+          </div>
+        </article>
+        <article class="terminal" aria-label="Esempio terminale CI/CD">
+          <div class="terminal-header" aria-hidden="true">
+            <span class="terminal-dot" style="background:#f97066"></span>
+            <span class="terminal-dot" style="background:#fbbf24"></span>
+            <span class="terminal-dot" style="background:#34d399"></span>
+          </div>
+          <pre class="code-block">name: deploy-demo-app
+on:
+  push:
+    branches: [main]
+jobs:
+  build-and-deploy:
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t ghcr.io/org/devops-demo:${GITHUB_SHA} .
+      - run: docker push ghcr.io/org/devops-demo:${GITHUB_SHA}
+      - run: kubectl set image deployment/devops-demo app=ghcr.io/org/devops-demo:${GITHUB_SHA}</pre>
+        </article>
+      </div>
+    </section>
+
+    <section id="metrics">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">Metriche simulate</span>
+            <h2>Un cruscotto minimale per introdurre monitoring e SLO.</h2>
+          </div>
+          <p>I valori qui sotto sono simulati lato client, ma sono utili per mostrare a lezione quali numeri osservare, come interpretare un degrado del servizio e come collegare la telemetria al deploy.</p>
+        </div>
+        <div class="kpis" aria-label="KPI applicativi">
+          <div class="kpi"><strong id="reqCount">12.480</strong><span>Richieste/ora</span></div>
+          <div class="kpi"><strong id="errRate">0,7%</strong><span>Error rate</span></div>
+          <div class="kpi"><strong id="latency">184 ms</strong><span>P95 latency</span></div>
+          <div class="kpi"><strong id="uptime">99,95%</strong><span>Disponibilità</span></div>
+        </div>
+        <div class="card" style="margin-top:var(--space-5);">
+          <div class="bar-wrap">
+            <div class="bar-row"><strong>CPU</strong><div class="bar-track"><div class="bar-fill" style="width:42%"></div></div><span>42%</span></div>
+            <div class="bar-row"><strong>Memory</strong><div class="bar-track"><div class="bar-fill" style="width:58%"></div></div><span>58%</span></div>
+            <div class="bar-row"><strong>Traffic</strong><div class="bar-track"><div class="bar-fill" style="width:71%"></div></div><span>71%</span></div>
+            <div class="bar-row"><strong>Errors</strong><div class="bar-track"><div class="bar-fill" style="width:9%"></div></div><span>9%</span></div>
+          </div>
+          <div class="inline-actions" style="margin-top:var(--space-6);">
+            <button class="ghost-btn" id="simulateLoad">Simula aumento di carico</button>
+            <button class="danger-btn" id="simulateIncident">Simula incidente</button>
+            <button class="ghost-btn" id="resetMetrics">Ripristina</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="container grid-2">
+        <article class="card">
+          <span class="eyebrow">Idee per le lezioni</span>
+          <h2 style="margin-top:1rem; max-width:14ch;">Come usare questa app durante il corso.</h2>
+          <ul class="stack" style="margin-top:1rem; padding-left:1rem;">
+            <li>Mostrare differenza tra build locale e build container.</li>
+            <li>Associare una release a una versione leggibile in UI.</li>
+            <li>Far vedere come cambiano le metriche dopo un deploy.</li>
+            <li>Spiegare readiness e liveness probe con esempi pratici.</li>
+            <li>Simulare un rollback dopo un incremento dell’error rate.</li>
+          </ul>
+        </article>
+        <article class="card">
+          <span class="eyebrow">Struttura consigliata</span>
+          <h2 style="margin-top:1rem; max-width:14ch;">File semplici, perfetti per introdurre repository e Dockerfile.</h2>
+          <pre class="code-block">devops-demo-app/
+├── devops-demo-app.html
+├── Dockerfile
+├── nginx.conf
+├── k8s/
+│   ├── deployment.yaml
+│   └── service.yaml
+└── .github/workflows/deploy.yml</pre>
+        </article>
+      </div>
+    </section>
+
+    <section id="faq" class="faq">
+      <div class="container">
+        <div class="section-head">
+          <div>
+            <span class="eyebrow">FAQ</span>
+            <h2>Domande tipiche da affrontare in aula.</h2>
+          </div>
+          <p>Queste risposte possono essere utili anche come traccia per il docente, per contestualizzare la demo durante le lezioni su Docker, CI/CD, Kubernetes e monitoring.</p>
+        </div>
+        <div class="card">
+          <details open>
+            <summary>Perché usare un’app così semplice?</summary>
+            <p>Perché consente di spiegare bene il flusso DevOps senza sprecare tempo sul dominio applicativo. L’attenzione resta su build, deploy, configurazione, observability e troubleshooting.</p>
+          </details>
+          <details>
+            <summary>È adatta a Docker e Kubernetes?</summary>
+            <p>Sì. Proprio perché è piccola, è ideale per mostrare containerizzazione, image tagging, rollout e probe applicativi con pochi passaggi chiari.</p>
+          </details>
+          <details>
+            <summary>Posso aggiungere un backend reale in seguito?</summary>
+            <p>Certo. Questa base può evolvere facilmente in una piccola app Node, Python o .NET con endpoint veri, mantenendo la stessa struttura visiva e didattica.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>DevOps Demo App · esempio didattico per corsi su CI/CD, Docker, Kubernetes, Terraform, monitoring e DevSecOps.</p>
+    </div>
+  </footer>
+
+  <script>
+    (() => {
+      const root = document.documentElement;
+      const toggle = document.querySelector('[data-theme-toggle]');
+      let theme = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+      root.setAttribute('data-theme', theme);
+      const setToggleLabel = () => toggle.setAttribute('aria-label', theme === 'dark' ? 'Passa al tema chiaro' : 'Passa al tema scuro');
+      setToggleLabel();
+      toggle.addEventListener('click', () => {
+        theme = theme === 'dark' ? 'light' : 'dark';
+        root.setAttribute('data-theme', theme);
+        setToggleLabel();
+      });
+
+      const releaseVersion = document.getElementById('releaseVersion');
+      const releaseChannel = document.getElementById('releaseChannel');
+      const podCount = document.getElementById('podCount');
+      const podStatus = document.getElementById('podStatus');
+      const featureFlag = document.getElementById('featureFlag');
+      const reqCount = document.getElementById('reqCount');
+      const errRate = document.getElementById('errRate');
+      const latency = document.getElementById('latency');
+      const uptime = document.getElementById('uptime');
+
+      const baseline = { req: 12480, err: 0.7, lat: 184, up: 99.95, pods: '3/3 ready' };
+      const formatInt = n => n.toLocaleString('it-IT');
+      const formatPct = n => `${n.toFixed(1).replace('.', ',')}%`;
+      const formatUptime = n => `${n.toFixed(2).replace('.', ',')}%`;
+      const formatMs = n => `${Math.round(n)} ms`;
+
+      const applyHealthy = () => {
+        releaseVersion.textContent = 'v1.4.2';
+        releaseChannel.textContent = 'stable';
+        releaseChannel.className = 'pill info';
+        podCount.textContent = baseline.pods;
+        podStatus.textContent = 'ok';
+        podStatus.className = 'pill ok';
+        featureFlag.textContent = 'disabled';
+        featureFlag.className = 'pill warn';
+        reqCount.textContent = formatInt(baseline.req);
+        errRate.textContent = formatPct(baseline.err);
+        latency.textContent = formatMs(baseline.lat);
+        uptime.textContent = formatUptime(baseline.up);
+      };
+
+      document.getElementById('simulateLoad').addEventListener('click', () => {
+        reqCount.textContent = formatInt(18720);
+        errRate.textContent = formatPct(1.3);
+        latency.textContent = formatMs(276);
+        uptime.textContent = formatUptime(99.82);
+        releaseVersion.textContent = 'v1.5.0-rc1';
+        releaseChannel.textContent = 'canary';
+        releaseChannel.className = 'pill warn';
+        featureFlag.textContent = 'enabled';
+        featureFlag.className = 'pill info';
+      });
+
+      document.getElementById('simulateIncident').addEventListener('click', () => {
+        reqCount.textContent = formatInt(9450);
+        errRate.textContent = formatPct(6.8);
+        latency.textContent = formatMs(920);
+        uptime.textContent = formatUptime(97.40);
+        podCount.textContent = '2/3 ready';
+        podStatus.textContent = 'degraded';
+        podStatus.className = 'pill err';
+        releaseVersion.textContent = 'v1.5.0';
+        releaseChannel.textContent = 'rollback suggested';
+        releaseChannel.className = 'pill err';
+      });
+
+      document.getElementById('resetMetrics').addEventListener('click', applyHealthy);
+      applyHealthy();
+    })();
+  </script>
+</body>
+</html>

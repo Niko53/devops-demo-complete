@@ -1,0 +1,9 @@
+services:
+  devops-demo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: devops-demo
+    ports:
+      - "8080:80"
+    restart: unless-stopped
